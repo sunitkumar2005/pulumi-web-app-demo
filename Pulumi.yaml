@@ -1,0 +1,3 @@
+name: pulumi-web-app
+runtime: dotnet
+description: This is web app service in azure

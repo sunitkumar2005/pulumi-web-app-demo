@@ -1,40 +1,60 @@
-﻿using Pulumi;
+using Pulumi;
 using Pulumi.AzureNative.Resources;
-using Pulumi.AzureNative.Storage;
-using Pulumi.AzureNative.Storage.Inputs;
 using System.Collections.Generic;
+using Pulumi.AzureNative.App;
+using Pulumi.AzureNative.Web;
+using Pulumi.AzureNative.Web.Inputs;
+using Pulumi.AzureNative.Insights;
 
 return await Pulumi.Deployment.RunAsync(() =>
 {
     // Create an Azure Resource Group
-    var resourceGroup = new ResourceGroup("resourceGroup");
-
-    // Create an Azure resource (Storage Account)
-    var storageAccount = new StorageAccount("sa", new StorageAccountArgs
+    var resourceGroup = new ResourceGroup("sunit-pip-rg-bicep", new()
+    {
+        Location = "eastus",
+        ResourceGroupName = "sunit-pip-rg-bicep",
+    });
+    var appServicePlan = new AppServicePlan("asp-pulumi-demo-sunit", new AppServicePlanArgs
     {
         ResourceGroupName = resourceGroup.Name,
-        Sku = new SkuArgs
+        Kind = "App",
+        Sku = new SkuDescriptionArgs
         {
-            Name = SkuName.Standard_LRS
+            Tier = "Basic",
+            Name = "B1",
         },
-        Kind = Kind.StorageV2
     });
 
-    var storageAccountKeys = ListStorageAccountKeys.Invoke(new ListStorageAccountKeysInvokeArgs
+    //Create an Azure App Insights
+    var appInsights = new Component("appInsights-pulimi-demo-sunit", new ComponentArgs
+    {
+        ApplicationType = "web",
+        Kind = "web",
+        ResourceGroupName = resourceGroup.Name,
+    });
+
+   //Create Azure Web App to host application
+    var app = new WebApp("webapp-pulumi-demo-sunit", new WebAppArgs
     {
         ResourceGroupName = resourceGroup.Name,
-        AccountName = storageAccount.Name
-    });
+        ServerFarmId = appServicePlan.Id,
+        SiteConfig = new SiteConfigArgs
+        {
+            AppSettings = {
 
-    var primaryStorageKey = storageAccountKeys.Apply(accountKeys =>
-    {
-        var firstKey = accountKeys.Keys[0].Value;
-        return Output.CreateSecret(firstKey);
-    });
-
-    // Export the primary key of the Storage Account
-    return new Dictionary<string, object?>
-    {
-        ["primaryStorageKey"] = primaryStorageKey
-    };
+                    new NameValuePairArgs{
+                        Name = "APPINSIGHTS_INSTRUMENTATIONKEY",
+                        Value = appInsights.InstrumentationKey
+                    },
+                    new NameValuePairArgs{
+                        Name = "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                        Value = appInsights.InstrumentationKey.Apply(key => $"InstrumentationKey={key}"),
+                    },
+                    new NameValuePairArgs{
+                        Name = "ApplicationInsightsAgent_EXTENSION_VERSION",
+                        Value = "~2",
+                    },
+                },
+        }
+    }); 
 });

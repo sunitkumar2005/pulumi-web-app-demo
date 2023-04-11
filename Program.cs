@@ -9,14 +9,15 @@ using Pulumi.AzureNative.Insights;
 return await Pulumi.Deployment.RunAsync(() =>
 {
     // Create an Azure Resource Group
-    var resourceGroup = new ResourceGroup("sunit-pip-rg-bicep", new()
+    var resourceGroup = new ResourceGroup("sunit-pip-rg-pulumi", new()
     {
         Location = "eastus",
-        ResourceGroupName = "sunit-pip-rg-bicep",
+        ResourceGroupName = "sunit-pip-rg-pulumi",
     });
     var appServicePlan = new AppServicePlan("asp-pulumi-demo-sunit", new AppServicePlanArgs
     {
         ResourceGroupName = resourceGroup.Name,
+        Name= "asp-pulumi-demo-sunit",
         Kind = "App",
         Sku = new SkuDescriptionArgs
         {
@@ -37,6 +38,7 @@ return await Pulumi.Deployment.RunAsync(() =>
     var app = new WebApp("webapp-pulumi-demo-sunit", new WebAppArgs
     {
         ResourceGroupName = resourceGroup.Name,
+        Name= "webapp-pulumi-demo-sunit",
         ServerFarmId = appServicePlan.Id,
         SiteConfig = new SiteConfigArgs
         {
